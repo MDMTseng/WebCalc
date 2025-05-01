@@ -8,7 +8,18 @@ interface Session {
 }
 
 // Helper to generate unique IDs
-const generateId = () => crypto.randomUUID();
+const generateId = () => {
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  } else {
+    // Fallback for browsers that do not support crypto.randomUUID
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+};
 
 function App() {
   const initialSessionId = generateId();
@@ -139,7 +150,7 @@ function App() {
     // We depend on the result of activeSession(), which depends on sessions and activeSessionId
   }, [sessions, activeSessionId, isDegrees, activeSession, pendingDeleteSessionId]);
 
-  // Handles inserting text into the *active* session
+  // Handles inserting text into the *active* session at cursor position
   const insertText = (text: string) => {
     const session = activeSession();
     if (!session || !activeInputRef.current) return;
@@ -158,6 +169,7 @@ function App() {
 
     updateSession(activeSessionId, { expression: newValue });
 
+    // Set cursor position after the inserted text
     const newCursorPos = start + text.length;
     setTimeout(() => focusInput(newCursorPos), 0);
   };
@@ -170,6 +182,7 @@ function App() {
 
   // Handles direct typing in the *active* input field
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // This won't get called with readOnly, but kept for compatibility
     updateSession(activeSessionId, { expression: event.target.value });
   };
 
