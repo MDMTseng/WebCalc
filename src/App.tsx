@@ -439,13 +439,24 @@ function App() {
   }, [pendingDeleteSessionId, deleteSession, resetCountdown]);
 
   const addSession = () => {
-    resetResetCountdown();
+    //resetResetCountdown();
     if (pendingDeleteSessionId) {
       deleteSession(pendingDeleteSessionId);
     }
     const newId = generateId();
     const newSession: Session = { id: newId, expression: '', answer: '' };
-    setSessions(prev => [...prev, newSession]);
+    
+    setSessions(prev => {
+      // Find the index of the active session
+      const activeIndex = prev.findIndex(s => s.id === activeSessionId);
+      
+      // Insert the new session right after the active session
+      const updatedSessions = [...prev];
+      updatedSessions.splice(activeIndex + 1, 0, newSession);
+      
+      return updatedSessions;
+    });
+    
     setActiveSessionId(newId);
     setPendingDeleteSessionId(null); // Ensure no pending delete after adding
   };
