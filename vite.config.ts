@@ -11,11 +11,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'icons/*.png'],
       manifest: {
-        name: 'WebRuler',
-        short_name: 'WebRuler',
-        description: 'A browser-based measurement tool for precise screen measurements',
+        name: 'WebCalc',
+        short_name: 'WebCalc',
+        description: 'Scientific calculator with multi-session support',
         theme_color: '#007bff',
-        background_color: '#f5f5f5',
+        background_color: '#f0f2f5',
         display: 'standalone',
         icons: [
           {

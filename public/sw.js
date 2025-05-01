@@ -1,4 +1,4 @@
-const CACHE_NAME = 'webruler-v2';
+const CACHE_NAME = 'webcalc-v1';
 const urlsToCache = [
   '/',
   '/index.html',
