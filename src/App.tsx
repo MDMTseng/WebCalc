@@ -92,11 +92,7 @@ function App() {
   
   const activeInputRef = useRef<HTMLInputElement>(null);
 
-  // State for long press detection
-  const longPressTimerRef = useRef<number | null>(null); // Use number for browser timeout ID
-  const isLongPressTriggeredRef = useRef<boolean>(false);
-
-  // --- State for Swipe-to-Delete ---
+  // State for Swipe-to-Delete ---
   const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null);
   const swipeStartXRef = useRef<number>(0);
   const swipeStartTimeRef = useRef<number>(0);
@@ -282,22 +278,18 @@ function App() {
 
   // Input handlers call insertText (no change needed here)
   const handleInput = (value: string) => {
-    // resetResetCountdown();
     insertText(value);
   };
 
   const handleFunction = (func: string) => {
-    // resetResetCountdown();
     insertText(func + '(');
   };
 
   const handleSqrt = () => {
-    // resetResetCountdown();
     insertText('√(');
   };
 
   const handlePi = () => {
-    // resetResetCountdown();
     insertText('π');
   };
 
@@ -309,21 +301,17 @@ function App() {
 
   // Equals button logic (remains simple: just focus)
   const handleEquals = () => {
-    //resetResetCountdown();
     focusInput();
   };
 
   // Clear the *active* session (now primarily called by long press)
   const handleClear = () => {
-    //resetResetCountdown();
     updateSession(activeSessionId, { expression: '', answer: '' });
     focusInput(0);
   };
 
-  // Backspace in the *active* session (now primarily called by short press)
+  // Backspace in the *active* session
   const handleBackspace = () => {
-    //resetResetCountdown();
-    
     const session = activeSession();
     if (!session || !activeInputRef.current) return;
 
@@ -350,52 +338,14 @@ function App() {
     focusInput(newCursorPos);
   };
 
-  // --- Backspace Long Press Handlers ---
-  const startLongPressTimer = () => {
-    isLongPressTriggeredRef.current = false; // Reset flag
-    // Clear any existing timer
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-    }
-    // Start new timer
-    longPressTimerRef.current = setTimeout(() => {
-      handleClear(); // Execute clear on long press
-      isLongPressTriggeredRef.current = true; // Set flag
-      // Optionally provide haptic feedback here if possible
-    }, 1000); // 1.5 seconds for long press
-  };
-
-  const clearLongPressTimer = (isRelease: boolean = true) => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    // If released and long press didn't fire, trigger short press (backspace)
-    if (isRelease && !isLongPressTriggeredRef.current) {
-      console.log("clearLongPressTimer calling handleBackspace",isRelease);
-      handleBackspace();
-    }
-  };
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-      }
-    };
-  }, []);
-
   // Toggle angle unit (no change needed)
   const handleToggleAngleUnit = () => {
-    //resetResetCountdown();
     setIsDegrees(prev => !prev);
     focusInput();
   };
   
   // Cursor move in the *active* session
   const handleCursorMove = (direction: 'left' | 'right') => {
-    //resetResetCountdown();
     if (!activeInputRef.current) return;
     const currentPosition = activeInputRef.current.selectionStart ?? 0;
     let newPosition = currentPosition;
@@ -430,7 +380,6 @@ function App() {
   }, [activeSessionId]); // Include activeSessionId dependency
 
   const handleSetActiveSession = useCallback((id: string) => {
-    resetResetCountdown();
     if (pendingDeleteSessionId && pendingDeleteSessionId !== id) {
       deleteSession(pendingDeleteSessionId);
     }
@@ -439,7 +388,6 @@ function App() {
   }, [pendingDeleteSessionId, deleteSession, resetCountdown]);
 
   const addSession = () => {
-    //resetResetCountdown();
     if (pendingDeleteSessionId) {
       deleteSession(pendingDeleteSessionId);
     }
@@ -591,8 +539,6 @@ function App() {
     } else if (key === 'Enter') {
       handleEquals();
     } else if (key === 'Backspace') {
-
-      console.log("handleKeypadKeyPress calling handleBackspace");
       handleBackspace();
     } else if (key === 'Escape') {
       handleClear();
@@ -886,17 +832,8 @@ function App() {
                 <button 
                   type="button" 
                   className="button" 
-                  onMouseDown={(e) => {
-                    preventFocusLoss(e);
-                    startLongPressTimer();
-                  }}
-                  onMouseUp={() => clearLongPressTimer(true)}
-                  onMouseLeave={() => clearLongPressTimer(false)}
-                  onTouchStart={(e) => {
-                    preventFocusLoss(e);
-                    startLongPressTimer();
-                  }}
-                  // onTouchEnd={() => clearLongPressTimer(true)}
+                  onClick={handleBackspace}
+                  onMouseDown={preventFocusLoss}
                 >
                   ⌫
                 </button>
@@ -958,18 +895,9 @@ function App() {
                 <button type="button" className="button function" onClick={() => handleFunction('ceil')} onMouseDown={preventFocusLoss}>ceil</button>
                 <button 
                   type="button" 
-                  className="button" 
-                  onMouseDown={(e) => {
-                    preventFocusLoss(e);
-                    startLongPressTimer();
-                  }}
-                  onMouseUp={() => clearLongPressTimer(true)}
-                  onMouseLeave={() => clearLongPressTimer(false)}
-                  onTouchStart={(e) => {
-                    preventFocusLoss(e);
-                    startLongPressTimer();
-                  }}
-                  onTouchEnd={() => clearLongPressTimer(true)}
+                  className="button"
+                  onClick={handleBackspace}
+                  onMouseDown={preventFocusLoss}
                 >
                   ⌫
                 </button>
