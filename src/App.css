@@ -1,0 +1,1162 @@
+.app {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  background-color: #f0f2f5;
+  padding: 0;
+}
+
+.calculator {
+  background-color: #e9ecef;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 15px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Styles for the split display */
+.display-container {
+  display: flex;
+  align-items: stretch; /* Make input and answer same height */
+  background-color: #f8f9fa; /* Match previous display background */
+  border-radius: 8px;
+  margin-bottom: 25px;
+  border: 1px solid #dee2e6;
+  min-height: 70px;
+  overflow: hidden; /* Prevent content spillover */
+}
+
+.display-input {
+  flex-grow: 1; /* Allow input to take available space */
+  padding: 20px;
+  font-family: monospace;
+  font-size: 28px; /* Slightly smaller to fit more */
+  color: #343a40;
+  text-align: left; /* Align input to the left */
+  /* Basic input styling (remove borders, outlines) */
+  border: none;
+  outline: none;
+  background-color: transparent;
+  width: 1%; /* Hack to ensure flex-grow works correctly */
+  min-width: 50%; /* Ensure it takes at least half */
+}
+
+.display-answer {
+  padding: 20px;
+  font-family: monospace;
+  font-size: 28px; /* Match input size */
+  color: #6c757d; /* Dimmer color for the answer */
+  text-align: right;
+  white-space: nowrap; /* Prevent answer from wrapping */
+  overflow: hidden;
+  text-overflow: ellipsis; /* Show ... if answer is too long */
+  border-left: 1px solid #e0e0e0; /* Subtle separator */
+  background-color: #f8f9fa;
+  flex-shrink: 0; /* Prevent answer area from shrinking */
+}
+
+/* Remove styles for the old single display */
+.display {
+  display: none; /* Hide the old class if it still exists */
+}
+
+.keypad {
+  flex-grow: 1; 
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.button {
+  padding: 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+  background-color: #ffffff;
+  color: #495057;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.05);
+}
+
+.button:hover {
+  background-color: #f1f3f5;
+  box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+}
+
+.button:active {
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+  transform: translateY(1px);
+}
+
+.button.operator {
+  background-color: #e7f5ff;
+  color: #1971c2;
+}
+
+.button.operator:hover {
+  background-color: #d0ebff;
+}
+
+.button.function {
+  background-color: #f8f9fa;
+  color: #495057;
+}
+
+.button.function:hover {
+  background-color: #e9ecef;
+}
+
+.button.equals {
+  background-color: #339af0;
+  color: white;
+  grid-column: span 2;
+}
+
+.button.equals:hover {
+  background-color: #1c7ed6;
+}
+
+.button.clear {
+  background-color: #fa5252;
+  color: white;
+}
+
+.button.clear:hover {
+  background-color: #f03e3e;
+}
+
+.mode-toggle {
+  display: none;
+}
+
+/* Top buttons container */
+.top-buttons {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  gap: 10px;
+}
+
+/* Button styles */
+.calibrate-button,
+.toggle-fullscreen-button,
+.reset-button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  position: relative;
+}
+
+.reset-button {
+  background: #dc3545;
+}
+
+.calibrate-button::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.reset-button::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.calibrate-button:hover,
+.toggle-fullscreen-button:hover {
+  background: #0056b3;
+}
+
+.reset-button:hover {
+  background: #c82333;
+}
+
+/* Hide unused button */
+.toggle-measurements-button {
+  display: none;
+}
+
+/* Ruler styles */
+.ruler {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 500;
+}
+
+.horizontal-ruler,
+.vertical-ruler {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.9);
+  cursor: crosshair;
+  user-select: none;
+}
+
+.horizontal-ruler {
+  width: calc(100vw - 50px); /* Full width minus vertical ruler width */
+  height: 50px;
+  border-bottom: 1px solid #ccc;
+  z-index: 501;
+  left: 50px; /* Start after vertical ruler */
+}
+
+.vertical-ruler {
+  width: 50px;
+  height: calc(100vh - 50px); /* Full height minus horizontal ruler height */
+  border-right: 1px solid #ccc;
+  z-index: 501;
+  top: 50px; /* Start after horizontal ruler */
+}
+
+.tick {
+  position: absolute;
+  background: #333;
+  pointer-events: none;
+}
+
+.horizontal-ruler .tick {
+  width: 1px;
+  bottom: 0;
+}
+
+.vertical-ruler .tick {
+  height: 1px;
+  right: 0;
+}
+
+.tick.mm {
+  height: 10px;
+  width: 1px;
+}
+
+.tick.mm5 {
+  height: 15px;
+  width: 1px;
+}
+
+.tick.cm {
+  height: 20px;
+  width: 2px;
+}
+
+.vertical-ruler .tick.mm {
+  width: 10px;
+  height: 1px;
+}
+
+.vertical-ruler .tick.mm5 {
+  width: 15px;
+  height: 1px;
+}
+
+.vertical-ruler .tick.cm {
+  width: 20px;
+  height: 2px;
+}
+
+.label {
+  position: absolute;
+  font-size: 10px;
+  color: #333;
+}
+
+.horizontal-ruler .label {
+  top: 25px;
+  transform: translateX(-50%);
+}
+
+.vertical-ruler .label {
+  right: 25px;
+  transform: translateY(-50%);
+}
+
+/* Measurement lines */
+.measurement-lines {
+  position: fixed;
+  top: 50px; /* Start after horizontal ruler */
+  left: 50px; /* Start after vertical ruler */
+  width: calc(100vw - 50px); /* Full width minus vertical ruler */
+  height: calc(100vh - 50px); /* Full height minus horizontal ruler */
+  pointer-events: all;
+}
+
+.measurement-line {
+  position: absolute;
+  cursor: move;
+  z-index: 100;
+}
+
+.measurement-line.horizontal {
+  width: calc(100vw - 50px);
+  height: 30px;
+  transform: translateY(-5px);
+  left: 0;
+}
+
+.measurement-line.vertical {
+  height: calc(100vh - 50px);
+  width: 30px;
+  transform: translateX(-5px);
+  top: 0;
+}
+
+/* The actual visible line */
+.measurement-line::after {
+  content: '';
+  position: absolute;
+  background: rgba(0, 123, 255, 0.5);
+  transition: background-color 0.2s;
+}
+
+.measurement-line.horizontal::after {
+  width: 100%;
+  height: 1px; /* Thinner visible line */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.measurement-line.vertical::after {
+  height: 100%;
+  width: 1px; /* Thinner visible line */
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Remove borders since we want the thinnest possible line */
+.measurement-line.horizontal::after,
+.measurement-line.vertical::after {
+  border: none;
+}
+
+/* Drag handle */
+.measurement-line::before {
+  content: '';
+  position: absolute;
+  background: rgba(0, 123, 255, 0.9);
+  border-radius: 4px;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.measurement-line.horizontal::before {
+  width: 24px;
+  height: 12px;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.measurement-line.vertical::before {
+  width: 12px;
+  height: 24px;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Hover states */
+.measurement-line:hover::after {
+  background: rgba(0, 123, 255, 0.8);
+}
+
+.measurement-line:hover::before {
+  opacity: 1;
+}
+
+/* Active states */
+.measurement-line:active::after {
+  background: rgba(0, 123, 255, 1);
+}
+
+/* Calibration modal */
+.calibration-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  width: 500px;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 20px 30px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.modal-body {
+  padding: 30px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 20px 30px;
+  border-top: 1px solid #dee2e6;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: white;
+  border-radius: 0 0 8px 8px;
+}
+
+.modal-footer button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.modal-footer button:first-child {
+  background: #007bff;
+  color: white;
+}
+
+.modal-footer button:first-child:hover {
+  background: #0056b3;
+}
+
+.modal-footer button:last-child {
+  background: #6c757d;
+  color: white;
+}
+
+.modal-footer button:last-child:hover {
+  background: #5a6268;
+}
+
+.calibration-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.method {
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.method h3 {
+  margin: 0 0 15px;
+  color: #007bff;
+  font-size: 18px;
+}
+
+.method p {
+  margin: 0 0 20px;
+  color: #666;
+}
+
+.calibration-line {
+  height: 4px;
+  background: #007bff;
+  margin: 40px 0;
+  position: relative;
+  resize: horizontal;
+  overflow: auto;
+  width: 200px;
+}
+
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 20px;
+  background: #007bff;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.resize-handle.left {
+  left: -5px;
+}
+
+.resize-handle.right {
+  right: -5px;
+}
+
+.control {
+  margin-top: 20px;
+}
+
+.control label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #333;
+}
+
+.control input {
+  width: 80px;
+  padding: 6px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.buttons button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.buttons button:first-child {
+  background: #007bff;
+  color: white;
+}
+
+.buttons button:first-child:hover {
+  background: #0056b3;
+}
+
+.buttons button:last-child {
+  background: #6c757d;
+  color: white;
+}
+
+.buttons button:last-child:hover {
+  background: #5a6268;
+}
+
+/* Measurement display */
+.measurements-display {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 200px;
+  border: 1px solid rgba(0, 123, 255, 0.2);
+  transition: transform 0.3s ease-in-out;
+}
+
+.measurements-display.minimized {
+  transform: translateY(calc(100% - 50px));
+}
+
+.measurements-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.minimize-button {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 5px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.minimize-button:hover {
+  color: #333;
+}
+
+.measurements-display h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+}
+
+.measurements-display h4 {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.measurement-list {
+  display: flex;
+  gap: 20px;
+}
+
+.measurement-section {
+  flex: 1;
+}
+
+.measurement-item {
+  font-size: 14px;
+  color: #333;
+  padding: 4px 0;
+  font-weight: 500;
+}
+
+/* Measurement labels between lines */
+.measurement-label {
+  position: absolute;
+  background: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 16px;
+  color: #000;
+  pointer-events: none;
+  z-index: 2100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid #007bff;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 50px;
+  text-align: center;
+}
+
+/* Measurement instructions */
+.measurement-instructions {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.instruction-box {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 20px 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.instruction-box h3 {
+  margin: 0 0 10px;
+  color: #333;
+  font-size: 18px;
+}
+
+.instruction-box ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.instruction-box li {
+  color: #666;
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.ratio-control {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ratio-inputs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+}
+
+.ratio-inputs input {
+  width: 60px;
+  text-align: center;
+}
+
+.ratio-divider {
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+}
+
+.ratio-preview {
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+}
+
+.ratio-control button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  background: #007bff;
+  color: white;
+  transition: background-color 0.2s;
+  margin-top: 10px;
+}
+
+.ratio-control button:hover {
+  background: #0056b3;
+}
+
+/* Add styles for fullscreen mode */
+.app:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #f5f5f5;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.app:-moz-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #f5f5f5;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.app:-ms-fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #f5f5f5;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.app:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #f5f5f5;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.current-calibration {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #dee2e6;
+}
+
+.current-calibration p {
+  margin: 0 0 10px;
+  color: #666;
+  font-size: 14px;
+}
+
+.calibration-values {
+  display: flex;
+  gap: 20px;
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+}
+
+.new-calibration-preview {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #dee2e6;
+  color: #666;
+  font-size: 14px;
+}
+
+.new-calibration-preview .calibration-values {
+  margin-top: 8px;
+  color: #007bff;
+}
+
+/* Ensure buttons are easily tappable on mobile */
+.top-buttons button {
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  margin: 4px;
+  font-size: 14px;
+  touch-action: manipulation;
+}
+
+@media (max-width: 768px) {
+  .top-buttons {
+    gap: 5px;
+  }
+  
+  .top-buttons button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    font-size: 14px;
+  }
+}
+
+/* Style for the form wrapper if needed (likely not) */
+.keypad-form {
+  flex: 0 0 auto;
+  min-height: 0; 
+  overflow: hidden; 
+  display: flex; 
+  flex-direction: column;
+}
+
+.sessions-list {
+  flex-grow: 1; 
+  overflow-y: auto; 
+  flex-shrink: 1; 
+  gap: 8px;
+  padding-right: 5px;
+}
+
+.session-item {
+  border: 2px solid transparent; /* Base border */
+  border-radius: 8px; /* Slightly smaller rounding */
+  padding: 3px; /* Reduced padding */
+  transition: border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+  cursor: pointer;
+  background-color: #f8f9fa; /* Default background */
+}
+
+.session-item:hover {
+   border-color: #adb5bd; /* Indicate hover */
+}
+
+.session-item.active {
+  border-color: #339af0; /* Highlight active session */
+  background-color: #ffffff; /* Slightly different background when active */
+  cursor: default; /* No pointer needed when active */
+}
+
+/* Override display container margin when inside session list */
+.session-item .display-container {
+  min-height: 50px; /* Reduced min-height */
+  border-radius: 6px; /* Inner rounding */
+  margin-bottom: 0;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden; /* Important */
+}
+
+/* Base styles for display input (active and inactive) */
+.session-item .display-input {
+  padding: 10px 15px; 
+  font-size: 20px; 
+  font-family: monospace;
+  color: #343a40;
+  text-align: left;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  width: 1%; /* Needed for flex-grow */
+  flex-grow: 1; 
+  min-width: 50%;
+  box-sizing: border-box;
+  /* Remove browser specific appearance */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Styles for the inactive (readOnly) input */
+.session-item .display-input.inactive-expression {
+  /* cursor: default; /* Or keep pointer if parent handles click */
+  /* background-color: #f8f9fa; /* Match parent session background */
+  /* You might not need many specific styles if it inherits correctly */
+  /* Ensure placeholder style is distinct if needed */
+}
+
+.session-item .display-input.inactive-expression::placeholder {
+  color: #adb5bd; /* Lighter grey for placeholder */
+  font-style: italic;
+}
+
+/* Remove the old separate placeholder text style */
+.placeholder-text {
+   display: none;
+}
+
+/* Add Session Button Styling */
+.add-session-container {
+    flex-shrink: 0; 
+    margin: 10px 0;
+}
+
+.add-session-button {
+    width: 50px; 
+    height: 50px;
+    font-size: 26px;
+    line-height: 1;
+    padding: 0;
+    border-radius: 50%; /* Make it circular */
+    background-color: #20c997; /* Teal color */
+    color: white;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.add-session-button:hover {
+    background-color: #1aa07a;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* --- Responsive Adjustments --- */
+
+/* Style for the answer part */
+.session-item .display-answer {
+  touch-action: pan-y; /* Allow vertical scroll, prevent horizontal page scroll during swipe */
+  cursor: grab; /* Indicate swipable */
+  padding: 10px 15px; 
+  font-size: 16px; 
+  font-family: monospace;
+  color: #6c757d; 
+  text-align: right;
+  white-space: nowrap; 
+  overflow: hidden;
+  text-overflow: ellipsis; 
+  border-left: 1px solid #e0e0e0;
+  background-color: transparent;
+  flex-shrink: 0; 
+}
+
+/* Style for the Cancel Delete button */
+.cancel-delete-button {
+  background-color: #dc3545; /* Red background */
+  color: white;
+  border: none;
+  padding: 10px 15px; /* Match answer padding */
+  font-size: 16px; /* Match answer font size */
+  font-family: monospace;
+  text-align: center;
+  flex-grow: 1; /* Take space like answer box */
+  cursor: pointer;
+  border-radius: 0 6px 6px 0; /* Match rounding on right side */
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.cancel-delete-button:hover {
+  background-color: #c82333; /* Darker red */
+}
+
+/* Optional: Style for the item pending delete */
+.session-item.pending-delete {
+  /* background-color: #fff0f0; Slightly red background? */
+  /* Could also add transition/transform to reveal button */
+}
+
+/* Make sure input doesn't overlap cancel button */
+.session-item.pending-delete .display-input {
+   /* Maybe reduce width slightly? Or rely on Cancel button's flex-grow */
+}
+
+/* ... existing styles ... */
+
+@media (orientation: landscape) and (max-height: 600px) { 
+  .calculator {
+    flex-direction: row;
+    height: 100%;
+    padding: 10px;
+  }
+
+  .session-area {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    margin-right: 10px;
+    overflow: hidden;
+  }
+
+  .sessions-list {
+      flex-grow: 1;
+      height: auto;
+      margin-bottom: 0;
+  }
+
+   .add-session-container {
+     order: 1;
+     margin: 10px 0 5px 0;
+     justify-content: flex-start;
+   }
+
+  .keypad-form {
+    flex: 0 0 auto;
+    height: auto;
+    padding-left: 10px;
+    min-height: auto;
+    overflow: hidden; 
+    display: flex; 
+    flex-direction: column;
+  }
+}
+
+/* You might still want specific size tweaks for very small devices */
+@media (max-width: 360px) and (orientation: portrait) {
+    .calculator {
+        padding: 10px;
+    }
+    .session-item .display-input {
+        font-size: 14px;
+    }
+    .session-item .display-answer {
+        font-size: 12px;
+    }
+}
+
+/* Add explicit height for session area */
+.session-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.keypad-form {
+  flex: 0 0 auto;
+  min-height: 0; 
+  overflow: hidden; 
+  display: flex; 
+  flex-direction: column;
+}
+
+/* Function Mode Toggle Button */
+.fn-toggle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  padding: 8px 12px;
+  font-size: 14px;
+  background-color: #e7f5ff;
+  color: #1971c2;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-weight: 500;
+}
+
+.fn-toggle:hover {
+  background-color: #d0ebff;
+}
+
+/* Back button for function keypad */
+.back-button {
+  background-color: #f8f9fa;
+  color: #495057;
+  font-weight: 500;
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+}
+
+.back-button:hover {
+  background-color: #e9ecef;
+}
+
+/* Function keypad specific styles */
+.keypad.function-mode {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #ffffff;
+  z-index: 1;
+  animation: slideIn 0.2s ease-out;
+}
+
+.keypad.standard-mode {
+  animation: slideOut 0.2s ease-out;
+}
+
+/* Absolute value button */
+.button.abs-value {
+  font-family: serif;
+  font-weight: bold;
+}
+
+/* Animation for keypad transitions */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Containing div for both keypads with relative positioning */
+.keypads-container {
+  position: relative;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+} 
