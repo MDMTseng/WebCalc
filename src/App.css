@@ -1197,4 +1197,58 @@ input[readonly].display-input {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
+}
+
+.add-session-button-low-profile {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #e7f5ff;
+  color: #1971c2;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 8px;
+}
+
+.add-session-button-low-profile:hover {
+  background-color: #d0ebff;
+}
+
+.reset-button-low-profile {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #fff5f5;
+  color: #e03131;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reset-button-low-profile:hover {
+  background-color: #ffe3e3;
+}
+
+/* Style for reset button during countdown */
+.reset-button-low-profile[title^="Click"] {
+  background-color: #fa5252;
+  color: white;
+  animation: pulse 1s infinite;
+}
+
+.reset-button-low-profile[title^="Click"]:hover {
+  background-color: #ff6b6b;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+  }
 } 

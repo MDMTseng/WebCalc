@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, PointerEvent } from 'react'
+import { useState, useRef, useEffect, useCallback, PointerEvent, useLayoutEffect } from 'react'
 import './App.css'
 
 interface Session {
@@ -21,14 +21,74 @@ const generateId = () => {
   }
 };
 
+// Local storage keys
+const STORAGE_KEY_SESSIONS = 'webCalc_sessions';
+const STORAGE_KEY_ACTIVE_SESSION = 'webCalc_activeSessionId';
+const STORAGE_KEY_IS_DEGREES = 'webCalc_isDegrees';
+const STORAGE_KEY_IS_FUNCTION_MODE = 'webCalc_isFunctionMode';
+
 function App() {
-  const initialSessionId = generateId();
-  const [sessions, setSessions] = useState<Session[]>([
-    { id: initialSessionId, expression: '', answer: '' }
-  ]);
-  const [activeSessionId, setActiveSessionId] = useState<string>(initialSessionId);
-  const [isDegrees, setIsDegrees] = useState(true);
-  const [isFunctionMode, setIsFunctionMode] = useState(false);
+  // Load saved data from localStorage or use defaults
+  const loadSavedSessions = (): Session[] => {
+    try {
+      const savedSessions = localStorage.getItem(STORAGE_KEY_SESSIONS);
+      if (savedSessions) {
+        return JSON.parse(savedSessions);
+      }
+    } catch (error) {
+      console.error('Error loading saved sessions:', error);
+    }
+    // Default if nothing saved or error occurs
+    const initialSessionId = generateId();
+    return [{ id: initialSessionId, expression: '', answer: '' }];
+  };
+
+  const loadSavedActiveSessionId = (): string => {
+    try {
+      const savedId = localStorage.getItem(STORAGE_KEY_ACTIVE_SESSION);
+      if (savedId) {
+        // Verify this ID exists in our saved sessions
+        const sessions = loadSavedSessions();
+        if (sessions.some(s => s.id === savedId)) {
+          return savedId;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading active session ID:', error);
+    }
+    // Default to first session if nothing saved or ID not found
+    return loadSavedSessions()[0].id;
+  };
+
+  const loadSavedIsDegrees = (): boolean => {
+    try {
+      const savedIsDegrees = localStorage.getItem(STORAGE_KEY_IS_DEGREES);
+      if (savedIsDegrees !== null) {
+        return savedIsDegrees === 'true';
+      }
+    } catch (error) {
+      console.error('Error loading angle unit setting:', error);
+    }
+    return true; // Default to degrees
+  };
+
+  const loadSavedIsFunctionMode = (): boolean => {
+    try {
+      const savedIsFunctionMode = localStorage.getItem(STORAGE_KEY_IS_FUNCTION_MODE);
+      if (savedIsFunctionMode !== null) {
+        return savedIsFunctionMode === 'true';
+      }
+    } catch (error) {
+      console.error('Error loading function mode setting:', error);
+    }
+    return false; // Default to standard mode
+  };
+
+  // Initialize state with saved values
+  const [sessions, setSessions] = useState<Session[]>(loadSavedSessions());
+  const [activeSessionId, setActiveSessionId] = useState<string>(loadSavedActiveSessionId());
+  const [isDegrees, setIsDegrees] = useState(loadSavedIsDegrees());
+  const [isFunctionMode, setIsFunctionMode] = useState(loadSavedIsFunctionMode());
   
   const activeInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,6 +103,16 @@ function App() {
   const isSwipingRef = useRef<boolean>(false);
   const SWIPE_THRESHOLD = -60; // Min pixels to swipe left
   const SWIPE_DURATION_THRESHOLD = 500; // Max ms for a swipe
+
+  // State and refs for cursor drag control
+  const [isDraggingCursor, setIsDraggingCursor] = useState(false);
+  const dragStartXRef = useRef(0);
+  const dragLastPositionRef = useRef(0);
+  const dragSensitivity = 16; // Pixels needed to move one character (less sensitive)
+
+  // State for reset button countdown
+  const [resetCountdown, setResetCountdown] = useState<number>(5);
+  const resetButtonRef = useRef<HTMLButtonElement>(null);
 
   // Use VirtualKeyboard API if available
   useEffect(() => {
@@ -85,6 +155,7 @@ function App() {
   }, [sessions, activeSessionId]);
 
   const focusInput = (position: number | null = null) => {
+    // Use a slightly longer timeout to ensure it happens after button focus events
     setTimeout(() => {
       if (activeInputRef.current) {
         activeInputRef.current.focus();
@@ -93,7 +164,7 @@ function App() {
         const pos = position ?? activeInputRef.current.selectionStart ?? currentValLength;
         activeInputRef.current.setSelectionRange(pos, pos);
       }
-    }, 0);
+    }, 10); // Slightly longer timeout
   };
 
   useEffect(() => {
@@ -156,7 +227,7 @@ function App() {
       if (typeof calcResult !== 'number' || !isFinite(calcResult)) {
         return NaN; // Handle non-numeric or infinite results
       }
-      return parseFloat(calcResult.toPrecision(12));
+      return parseFloat(calcResult.toFixed(10));
     } catch (error) {
       // console.error("Evaluation Error:", error);
       return NaN // Return NaN on syntax errors
@@ -169,7 +240,14 @@ function App() {
     if (!currentActiveSession || currentActiveSession.id === pendingDeleteSessionId) return; // Don't eval if pending delete
 
     const calculatedResult = evaluate(currentActiveSession.expression);
-    const newAnswer = isNaN(calculatedResult) ? '' : `= ${calculatedResult}`;
+    
+    // Format the result with fixed decimals
+    let newAnswer = '';
+    if (!isNaN(calculatedResult)) {
+      // Format using toFixed(10) but remove trailing zeros
+      const formattedResult = calculatedResult.toFixed(10).replace(/\.?0+$/, '');
+      newAnswer = `= ${formattedResult}`;
+    }
 
     // Only update if the answer actually changed
     if (currentActiveSession.answer !== newAnswer) {
@@ -199,14 +277,29 @@ function App() {
 
     // Set cursor position after the inserted text
     const newCursorPos = start + text.length;
-    setTimeout(() => focusInput(newCursorPos), 0);
+    focusInput(newCursorPos);
   };
 
   // Input handlers call insertText (no change needed here)
-  const handleInput = (value: string) => insertText(value);
-  const handleFunction = (func: string) => insertText(func + '(');
-  const handleSqrt = () => insertText('√(');
-  const handlePi = () => insertText('π');
+  const handleInput = (value: string) => {
+    // resetResetCountdown();
+    insertText(value);
+  };
+
+  const handleFunction = (func: string) => {
+    // resetResetCountdown();
+    insertText(func + '(');
+  };
+
+  const handleSqrt = () => {
+    // resetResetCountdown();
+    insertText('√(');
+  };
+
+  const handlePi = () => {
+    // resetResetCountdown();
+    insertText('π');
+  };
 
   // Handles direct typing in the *active* input field
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,17 +309,21 @@ function App() {
 
   // Equals button logic (remains simple: just focus)
   const handleEquals = () => {
+    //resetResetCountdown();
     focusInput();
-  }
+  };
 
   // Clear the *active* session (now primarily called by long press)
   const handleClear = () => {
+    //resetResetCountdown();
     updateSession(activeSessionId, { expression: '', answer: '' });
-    setTimeout(() => focusInput(0), 0); 
-  }
+    focusInput(0);
+  };
 
   // Backspace in the *active* session (now primarily called by short press)
   const handleBackspace = () => {
+    //resetResetCountdown();
+    
     const session = activeSession();
     if (!session || !activeInputRef.current) return;
 
@@ -250,8 +347,8 @@ function App() {
     // if (newValue === "") newValue = "0";
 
     updateSession(activeSessionId, { expression: newValue });
-    setTimeout(() => focusInput(newCursorPos), 0);
-  }
+    focusInput(newCursorPos);
+  };
 
   // --- Backspace Long Press Handlers ---
   const startLongPressTimer = () => {
@@ -265,7 +362,7 @@ function App() {
       handleClear(); // Execute clear on long press
       isLongPressTriggeredRef.current = true; // Set flag
       // Optionally provide haptic feedback here if possible
-    }, 1500); // 1.5 seconds for long press
+    }, 1000); // 1.5 seconds for long press
   };
 
   const clearLongPressTimer = (isRelease: boolean = true) => {
@@ -275,6 +372,7 @@ function App() {
     }
     // If released and long press didn't fire, trigger short press (backspace)
     if (isRelease && !isLongPressTriggeredRef.current) {
+      console.log("clearLongPressTimer calling handleBackspace",isRelease);
       handleBackspace();
     }
   };
@@ -290,12 +388,14 @@ function App() {
 
   // Toggle angle unit (no change needed)
   const handleToggleAngleUnit = () => {
-    setIsDegrees(prev => !prev)
+    //resetResetCountdown();
+    setIsDegrees(prev => !prev);
     focusInput();
-  }
+  };
   
   // Cursor move in the *active* session
   const handleCursorMove = (direction: 'left' | 'right') => {
+    //resetResetCountdown();
     if (!activeInputRef.current) return;
     const currentPosition = activeInputRef.current.selectionStart ?? 0;
     let newPosition = currentPosition;
@@ -330,14 +430,16 @@ function App() {
   }, [activeSessionId]); // Include activeSessionId dependency
 
   const handleSetActiveSession = useCallback((id: string) => {
+    resetResetCountdown();
     if (pendingDeleteSessionId && pendingDeleteSessionId !== id) {
       deleteSession(pendingDeleteSessionId);
     }
     setPendingDeleteSessionId(null); // Cancel pending delete on any activation
     setActiveSessionId(id);
-  }, [pendingDeleteSessionId, deleteSession]);
+  }, [pendingDeleteSessionId, deleteSession, resetCountdown]);
 
   const addSession = () => {
+    resetResetCountdown();
     if (pendingDeleteSessionId) {
       deleteSession(pendingDeleteSessionId);
     }
@@ -439,7 +541,212 @@ function App() {
   // Function to toggle between standard and function keypad
   const toggleFunctionMode = () => {
     setIsFunctionMode(!isFunctionMode);
+    focusInput(); // Maintain focus when switching keypad modes
   };
+
+  // Helper function to prevent focus loss on button clicks
+  const preventFocusLoss = (e: React.MouseEvent | React.TouchEvent) => {
+    // Prevent the default behavior that would focus the button
+    e.preventDefault();
+    // Stop propagation to prevent other handlers from potentially blurring
+    e.stopPropagation();
+  };
+
+  // Add a useLayoutEffect hook to ensure the input maintains focus after DOM updates
+  useLayoutEffect(() => {
+    // This runs synchronously after DOM updates but before browser paint
+    // Only focus if there is an active session
+    if (activeSession()) {
+      if (activeInputRef.current) {
+        activeInputRef.current.focus();
+        // Maintain current cursor position
+        const pos = activeInputRef.current.selectionStart ?? activeInputRef.current.value.length;
+        activeInputRef.current.setSelectionRange(pos, pos);
+      }
+    }
+  }, [sessions, activeSessionId, isFunctionMode]); // Focus after session changes or toggling function mode
+
+  // Handler for keydown events directly on the keypad container
+  const handleKeypadKeyPress = (e: React.KeyboardEvent) => {
+    // Prevent default behavior to avoid keyboard popup on mobile
+    e.preventDefault();
+    
+    // If a number or operator key was pressed, handle it
+    const key = e.key;
+    if (/^[0-9.]$/.test(key)) {
+      handleInput(key);
+    } else if (['+', '-', '*', '/', '%', '^'].includes(key)) {
+      handleInput(key);
+    } else if (key === 'Enter') {
+      handleEquals();
+    } else if (key === 'Backspace') {
+
+      console.log("handleKeypadKeyPress calling handleBackspace");
+      handleBackspace();
+    } else if (key === 'Escape') {
+      handleClear();
+    } else if (key === 'ArrowLeft') {
+      handleCursorMove('left');
+    } else if (key === 'ArrowRight') {
+      handleCursorMove('right');
+    }
+  };
+
+  // Handle start of cursor button drag
+  const handleCursorDragStart = (e: React.PointerEvent) => {
+    if (!activeInputRef.current) return;
+    
+    // Prevent focus loss
+    preventFocusLoss(e);
+    
+    // Start tracking drag
+    setIsDraggingCursor(true);
+    dragStartXRef.current = e.clientX;
+    
+    // Store current cursor position
+    dragLastPositionRef.current = activeInputRef.current.selectionStart ?? 0;
+    
+    // Capture pointer to track movement
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  // Handle cursor button drag movement
+  const handleCursorDrag = (e: React.PointerEvent) => {
+    if (!isDraggingCursor || !activeInputRef.current) return;
+    
+    // Calculate movement
+    const deltaX = e.clientX - dragStartXRef.current;
+    const charPositionChange = Math.floor(deltaX / dragSensitivity);
+    
+    if (charPositionChange !== 0) {
+      // Update position if change is significant enough
+      const currentValue = activeInputRef.current.value;
+      const oldPosition = dragLastPositionRef.current;
+      const newPosition = Math.max(0, Math.min(oldPosition + charPositionChange, currentValue.length));
+      
+      // Only update if position changed
+      if (newPosition !== oldPosition) {
+        // Update the reference position
+        dragLastPositionRef.current = newPosition;
+        // Update drag start position to avoid cumulative errors
+        dragStartXRef.current = e.clientX;
+        // Move cursor
+        focusInput(newPosition);
+      }
+    }
+  };
+
+  // Handle end of cursor button drag
+  const handleCursorDragEnd = (e: React.PointerEvent) => {
+    if (isDraggingCursor) {
+      setIsDraggingCursor(false);
+      
+      // Release pointer capture
+      if ((e.target as HTMLElement).hasPointerCapture(e.pointerId)) {
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      }
+    }
+  };
+
+  // Save sessions to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(sessions));
+    } catch (error) {
+      console.error('Error saving sessions:', error);
+    }
+  }, [sessions]);
+
+  // Save active session ID whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_ACTIVE_SESSION, activeSessionId);
+    } catch (error) {
+      console.error('Error saving active session ID:', error);
+    }
+  }, [activeSessionId]);
+
+  // Save angle unit preference whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_IS_DEGREES, isDegrees.toString());
+    } catch (error) {
+      console.error('Error saving angle unit setting:', error);
+    }
+  }, [isDegrees]);
+
+  // Save function mode preference whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_IS_FUNCTION_MODE, isFunctionMode.toString());
+    } catch (error) {
+      console.error('Error saving function mode setting:', error);
+    }
+  }, [isFunctionMode]);
+
+  // Clear all saved data and reset to defaults
+  const clearAllSavedData = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY_SESSIONS);
+      localStorage.removeItem(STORAGE_KEY_ACTIVE_SESSION);
+      localStorage.removeItem(STORAGE_KEY_IS_DEGREES);
+      localStorage.removeItem(STORAGE_KEY_IS_FUNCTION_MODE);
+      
+      // Reset to defaults
+      const initialSessionId = generateId();
+      setSessions([{ id: initialSessionId, expression: '', answer: '' }]);
+      setActiveSessionId(initialSessionId);
+      setIsDegrees(true);
+      setIsFunctionMode(false);
+    } catch (error) {
+      console.error('Error clearing saved data:', error);
+    }
+  };
+
+  // Helper function to reset countdown - we'll call this from various places
+  const resetResetCountdown = () => {
+    if (resetCountdown !== 5) {
+      setResetCountdown(5);
+    }
+  };
+
+  // Handle reset button click with countdown
+  const handleResetClick = (e: React.MouseEvent) => {
+    // Stop propagation to prevent the click from reaching the document
+    e.stopPropagation();
+    
+    if (resetCountdown === 1) {
+      // Execute reset when countdown reaches 0
+      clearAllSavedData();
+      // Reset the countdown
+      setResetCountdown(5);
+    } else {
+      // Decrease countdown
+      setResetCountdown(prev => prev - 1);
+    }
+  };
+
+  // Reset the countdown on blur
+  const handleResetBlur = () => {
+    // Reset countdown when button loses focus
+    resetResetCountdown();
+  };
+
+  // Add document click handler to reset countdown on any other interaction
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      // Only reset if the click is not on the reset button itself
+      if (resetButtonRef.current && !resetButtonRef.current.contains(e.target as Node)) {
+        resetResetCountdown();
+      }
+    };
+
+    document.addEventListener('click', handleDocumentClick);
+    
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, [resetCountdown]); // Include resetCountdown in dependencies
 
   return (
     <div className="app">
@@ -519,11 +826,24 @@ function App() {
               <button type="button" className="add-session-button-low-profile" onClick={addSession}>
                 + New Calculation
               </button>
+              <button 
+                type="button" 
+                className="reset-button-low-profile" 
+                onClick={handleResetClick}
+                onBlur={handleResetBlur}
+                ref={resetButtonRef}
+                title={resetCountdown === 5 ? "Reset Calculator" : `Click ${resetCountdown} more times to reset`}
+              >
+                {resetCountdown === 5 ? "Reset All" : `Confirm (${resetCountdown})`}
+              </button>
           </div>
         </div> {/* End of session-area wrapper */}
 
         {/* Keypad Area */}
-        <form onSubmit={handleSubmit} className="keypad-form">
+        <form onSubmit={handleSubmit} className="keypad-form" 
+          onKeyDown={handleKeypadKeyPress} // Add keydown handler to the form
+          tabIndex={0} // Make the keypad container focusable
+        >
           <div className="keypads-container">
 
             {/* Standard Keypad */}
@@ -531,56 +851,81 @@ function App() {
               <div className="keypad standard-mode">
                 {/* --- Row 1 --- */}
 
-                <button type="button" className="button function" onClick={toggleFunctionMode}>Fn</button>
-                <button type="button" className="button function" onClick={() => handleFunction('sin')}>sin</button>
-                <button type="button" className="button function" onClick={() => handleFunction('cos')}>cos</button>
-                <button type="button" className="button function" onClick={() => handleFunction('tan')}>tan</button>
-                <button type="button" className="button function" onClick={handlePi}>π</button>
+                <button type="button" className="button function" onClick={toggleFunctionMode} onMouseDown={preventFocusLoss}>Fn</button>
+                <button type="button" className="button function" onClick={() => handleFunction('sin')} onMouseDown={preventFocusLoss}>sin</button>
+                <button type="button" className="button function" onClick={() => handleFunction('cos')} onMouseDown={preventFocusLoss}>cos</button>
+                <button type="button" className="button function" onClick={() => handleFunction('tan')} onMouseDown={preventFocusLoss}>tan</button>
+                <button type="button" className="button function" onClick={handlePi} onMouseDown={preventFocusLoss}>π</button>
 
                 {/* --- Row 2 --- */}
-                <button type="button" className="button function" onClick={handleToggleAngleUnit}>
-                  {isDegrees ? 'DEG' : 'RAD'}
+                <button type="button" className="button function" onClick={handleToggleAngleUnit} onMouseDown={preventFocusLoss}>
+                  {/* it's to display "current" mode */}
+                  {isDegrees ? 'RAD' : 'DEG'}
                 </button>
-                <button type="button" className="button function" onClick={() => handleInput('^')}>x^y</button>
-                <button type="button" className="button function" onClick={handleSqrt}>√</button>
-                <button type="button" className="button function" onClick={() => handleInput('(')}>(</button>
-                <button type="button" className="button function" onClick={() => handleInput(')')}>)</button>
+                <button type="button" className="button function" onClick={() => handleInput('^')} onMouseDown={preventFocusLoss}>x^y</button>
+                <button type="button" className="button function" onClick={handleSqrt} onMouseDown={preventFocusLoss}>√</button>
+                <button type="button" className="button function" onClick={() => handleInput('(')} onMouseDown={preventFocusLoss}>(</button>
+                <button type="button" className="button function" onClick={() => handleInput(')')} onMouseDown={preventFocusLoss}>)</button>
 
                 {/* --- Row 3 --- */}
-                <button type="button" className="button" onClick={() => handleInput('7')}>7</button>
-                <button type="button" className="button" onClick={() => handleInput('8')}>8</button>
-                <button type="button" className="button" onClick={() => handleInput('9')}>9</button>
+                <button type="button" className="button" onClick={() => handleInput('7')} onMouseDown={preventFocusLoss}>7</button>
+                <button type="button" className="button" onClick={() => handleInput('8')} onMouseDown={preventFocusLoss}>8</button>
+                <button type="button" className="button" onClick={() => handleInput('9')} onMouseDown={preventFocusLoss}>9</button>
 
                 <button 
                   type="button" 
                   className="button" 
-                  onMouseDown={startLongPressTimer}
+                  onMouseDown={(e) => {
+                    preventFocusLoss(e);
+                    startLongPressTimer();
+                  }}
                   onMouseUp={() => clearLongPressTimer(true)}
                   onMouseLeave={() => clearLongPressTimer(false)}
-                  onTouchStart={startLongPressTimer}
-                  onTouchEnd={() => clearLongPressTimer(true)}
+                  onTouchStart={(e) => {
+                    preventFocusLoss(e);
+                    startLongPressTimer();
+                  }}
+                  // onTouchEnd={() => clearLongPressTimer(true)}
                 >
                   ⌫
                 </button>
-                <button type="button" className="button operator" onClick={() => handleInput('%')}>%</button>
+                <button type="button" className="button operator" onClick={() => handleInput('%')} onMouseDown={preventFocusLoss}>%</button>
                 {/* --- Row 4 --- */}
-                <button type="button" className="button" onClick={() => handleInput('4')}>4</button>
-                <button type="button" className="button" onClick={() => handleInput('5')}>5</button>
-                <button type="button" className="button" onClick={() => handleInput('6')}>6</button>
-                <button type="button" className="button operator" onClick={() => handleInput('+')}>+</button>
-                <button type="button" className="button operator" onClick={() => handleInput('*')}>×</button>
+                <button type="button" className="button" onClick={() => handleInput('4')} onMouseDown={preventFocusLoss}>4</button>
+                <button type="button" className="button" onClick={() => handleInput('5')} onMouseDown={preventFocusLoss}>5</button>
+                <button type="button" className="button" onClick={() => handleInput('6')} onMouseDown={preventFocusLoss}>6</button>
+                <button type="button" className="button operator" onClick={() => handleInput('+')} onMouseDown={preventFocusLoss}>+</button>
+                <button type="button" className="button operator" onClick={() => handleInput('*')} onMouseDown={preventFocusLoss}>×</button>
                 {/* --- Row 5 --- */}
 
-                <button type="button" className="button" onClick={() => handleInput('1')}>1</button>
-                <button type="button" className="button" onClick={() => handleInput('2')}>2</button>
-                <button type="button" className="button" onClick={() => handleInput('3')}>3</button>
-                <button type="button" className="button operator" onClick={() => handleInput('-')}>-</button>
-                <button type="button" className="button operator" onClick={() => handleInput('/')}>/</button>
+                <button type="button" className="button" onClick={() => handleInput('1')} onMouseDown={preventFocusLoss}>1</button>
+                <button type="button" className="button" onClick={() => handleInput('2')} onMouseDown={preventFocusLoss}>2</button>
+                <button type="button" className="button" onClick={() => handleInput('3')} onMouseDown={preventFocusLoss}>3</button>
+                <button type="button" className="button operator" onClick={() => handleInput('-')} onMouseDown={preventFocusLoss}>-</button>
+                <button type="button" className="button operator" onClick={() => handleInput('/')} onMouseDown={preventFocusLoss}>/</button>
                 {/* --- Row 6 --- */}
-                <button type="button" className="button" onClick={() => handleInput('0')}>0</button>
-                <button type="button" className="button" onClick={() => handleInput('.')}>.</button>
-                <button type="button" className="button function" onClick={() => handleCursorMove('left')}>&lt;</button>
-                <button type="button" className="button function" onClick={() => handleCursorMove('right')}>&gt;</button>
+                <button type="button" className="button" onClick={() => handleInput('0')} onMouseDown={preventFocusLoss}>0</button>
+                <button type="button" className="button" onClick={() => handleInput('.')} onMouseDown={preventFocusLoss}>.</button>
+                <button 
+                  type="button" 
+                  className="button function" 
+                  onClick={() => handleCursorMove('left')} 
+                  onMouseDown={preventFocusLoss}
+                  onPointerDown={handleCursorDragStart}
+                  onPointerMove={handleCursorDrag}
+                  onPointerUp={handleCursorDragEnd}
+                  onPointerCancel={handleCursorDragEnd}
+                >&lt;</button>
+                <button 
+                  type="button" 
+                  className="button function" 
+                  onClick={() => handleCursorMove('right')} 
+                  onMouseDown={preventFocusLoss}
+                  onPointerDown={handleCursorDragStart}
+                  onPointerMove={handleCursorDrag}
+                  onPointerUp={handleCursorDragEnd}
+                  onPointerCancel={handleCursorDragEnd}
+                >&gt;</button>
         </div>
       )}
 
@@ -588,52 +933,58 @@ function App() {
             {isFunctionMode && (
               <div className="keypad standard-mode">
                 {/* --- Row 1 --- */}
-                <button type="button" className="button back-button" onClick={toggleFunctionMode}>←</button>
-                <button type="button" className="button function abs-value" onClick={() => handleInput('abs(')}>|a|</button>
-                <button type="button" className="button function" onClick={() => handleFunction('round')}>round</button>
-                <button type="button" className="button function" onClick={() => handleInput('e')}>e</button>
-                <button type="button" className="button function" onClick={handleToggleAngleUnit}>
+                <button type="button" className="button back-button" onClick={toggleFunctionMode} onMouseDown={preventFocusLoss}>←</button>
+                <button type="button" className="button function abs-value" onClick={() => handleInput('abs(')} onMouseDown={preventFocusLoss}>|a|</button>
+                <button type="button" className="button function" onClick={() => handleFunction('round')} onMouseDown={preventFocusLoss}>round</button>
+                <button type="button" className="button function" onClick={() => handleInput('e')} onMouseDown={preventFocusLoss}>e</button>
+                <button type="button" className="button function" onClick={handleToggleAngleUnit} onMouseDown={preventFocusLoss}>
                   {isDegrees ? 'DEG' : 'RAD'}
                 </button>
                 {/* --- Row 2 --- */}
-                <button type="button" className="button function" onClick={() => handleFunction('log')}>log</button>
-                <button type="button" className="button function" onClick={() => handleFunction('ln')}>ln</button>
-                <button type="button" className="button function" onClick={() => handleFunction('floor')}>floor</button>
-                <button type="button" className="button function" onClick={() => handleFunction('ceil')}>ceil</button>
+                <button type="button" className="button function" onClick={() => handleFunction('log')} onMouseDown={preventFocusLoss}>log</button>
+                <button type="button" className="button function" onClick={() => handleFunction('ln')} onMouseDown={preventFocusLoss}>ln</button>
+                <button type="button" className="button function" onClick={() => handleFunction('floor')} onMouseDown={preventFocusLoss}>floor</button>
+                <button type="button" className="button function" onClick={() => handleFunction('ceil')} onMouseDown={preventFocusLoss}>ceil</button>
                 <button 
                   type="button" 
                   className="button" 
-                  onMouseDown={startLongPressTimer}
+                  onMouseDown={(e) => {
+                    preventFocusLoss(e);
+                    startLongPressTimer();
+                  }}
                   onMouseUp={() => clearLongPressTimer(true)}
                   onMouseLeave={() => clearLongPressTimer(false)}
-                  onTouchStart={startLongPressTimer}
+                  onTouchStart={(e) => {
+                    preventFocusLoss(e);
+                    startLongPressTimer();
+                  }}
                   onTouchEnd={() => clearLongPressTimer(true)}
                 >
                   ⌫
                 </button>
                 {/* --- Row 3 --- */}
-                <button type="button" className="button function" onClick={() => handleFunction('sinh')}>sinh</button>
-                <button type="button" className="button function" onClick={() => handleFunction('cosh')}>cosh</button>
-                <button type="button" className="button function" onClick={() => handleFunction('tanh')}>tanh</button>
-                <button type="button" className="button function" onClick={() => handleInput('(')}>(</button>
-                <button type="button" className="button function" onClick={() => handleInput(')')}>)</button>
+                <button type="button" className="button function" onClick={() => handleFunction('sinh')} onMouseDown={preventFocusLoss}>sinh</button>
+                <button type="button" className="button function" onClick={() => handleFunction('cosh')} onMouseDown={preventFocusLoss}>cosh</button>
+                <button type="button" className="button function" onClick={() => handleFunction('tanh')} onMouseDown={preventFocusLoss}>tanh</button>
+                <button type="button" className="button function" onClick={() => handleInput('(')} onMouseDown={preventFocusLoss}>(</button>
+                <button type="button" className="button function" onClick={() => handleInput(')')} onMouseDown={preventFocusLoss}>)</button>
                 {/* --- Row 4 --- */}
-                <button type="button" className="button function" onClick={() => handleFunction('asin')}>asin</button>
-                <button type="button" className="button function" onClick={() => handleFunction('acos')}>acos</button>
-                <button type="button" className="button function" onClick={() => handleFunction('atan')}>atan</button>
-                <button type="button" className="button function" onClick={() => handleInput('Math.sqrt(')}>√</button>
-                <button type="button" className="button function" onClick={() => handleInput('Math.cbrt(')}>∛</button>
+                <button type="button" className="button function" onClick={() => handleFunction('asin')} onMouseDown={preventFocusLoss}>asin</button>
+                <button type="button" className="button function" onClick={() => handleFunction('acos')} onMouseDown={preventFocusLoss}>acos</button>
+                <button type="button" className="button function" onClick={() => handleFunction('atan')} onMouseDown={preventFocusLoss}>atan</button>
+                <button type="button" className="button function" onClick={() => handleInput('Math.sqrt(')} onMouseDown={preventFocusLoss}>√</button>
+                <button type="button" className="button function" onClick={() => handleInput('Math.cbrt(')} onMouseDown={preventFocusLoss}>∛</button>
                 {/* --- Row 5 --- */}
-                <button type="button" className="button function" onClick={() => handleInput('Math.random()')}>rand</button>
-                <button type="button" className="button function" onClick={() => handleInput('Math.pow(')}>x^y</button>
-                <button type="button" className="button function" onClick={() => handleInput('Math.abs(')}>abs</button>
-                <button type="button" className="button function" onClick={() => handleInput('Math.E')}>e</button>
-                <button type="button" className="button equals" onClick={handleEquals}>=</button>
+                <button type="button" className="button function" onClick={() => handleInput('Math.random()')} onMouseDown={preventFocusLoss}>rand</button>
+                <button type="button" className="button function" onClick={() => handleInput('Math.pow(')} onMouseDown={preventFocusLoss}>x^y</button>
+                <button type="button" className="button function" onClick={() => handleInput('Math.abs(')} onMouseDown={preventFocusLoss}>abs</button>
+                <button type="button" className="button function" onClick={() => handleInput('Math.E')} onMouseDown={preventFocusLoss}>e</button>
+                <button type="button" className="button equals" onClick={handleEquals} onMouseDown={preventFocusLoss}>=</button>
                 {/* --- Row 6 --- */}
-                <button type="button" className="button operator" onClick={() => handleInput('+')} style={{ gridColumn: '1 / 3' }}>+</button>
-                <button type="button" className="button operator" onClick={() => handleInput('-')}>-</button>
-                <button type="button" className="button operator" onClick={() => handleInput('*')}>×</button>
-                <button type="button" className="button operator" onClick={() => handleInput('/')}>/</button>
+                <button type="button" className="button operator" onClick={() => handleInput('+')} style={{ gridColumn: '1 / 3' }} onMouseDown={preventFocusLoss}>+</button>
+                <button type="button" className="button operator" onClick={() => handleInput('-')} onMouseDown={preventFocusLoss}>-</button>
+                <button type="button" className="button operator" onClick={() => handleInput('*')} onMouseDown={preventFocusLoss}>×</button>
+                <button type="button" className="button operator" onClick={() => handleInput('/')} onMouseDown={preventFocusLoss}>/</button>
               </div>
             )}
           </div>
