@@ -108,7 +108,7 @@ function App() {
   const [isDraggingCursor, setIsDraggingCursor] = useState(false);
   const dragStartXRef = useRef(0);
   const dragLastPositionRef = useRef(0);
-  const dragSensitivity = 16; // Pixels needed to move one character (less sensitive)
+  const dragSensitivity = 24; // Pixels needed to move one character (less sensitive)
 
   // State for reset button countdown
   const [resetCountdown, setResetCountdown] = useState<number>(5);

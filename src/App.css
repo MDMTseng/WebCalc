@@ -25,9 +25,9 @@
   align-items: stretch; /* Make input and answer same height */
   background-color: #f8f9fa; /* Match previous display background */
   border-radius: 8px;
-  margin-bottom: 25px;
+  margin-bottom: 15px; /* Reduced margin */
   border: 1px solid #dee2e6;
-  min-height: 70px;
+  min-height: 60px; /* Slightly reduced */
   overflow: hidden; /* Prevent content spillover */
 }
 
@@ -107,20 +107,25 @@ input[readonly].display-input {
   flex-grow: 1; 
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  gap: 4px;
+  margin-top: 10px;
 }
 
 .button {
-  padding: 18px;
+  padding: 6px; /* Further reduced for better proportions */
   border: none;
-  border-radius: 8px;
-  font-size: 18px;
+  border-radius: 6px; /* Slightly smaller radius */
+  font-size: 16px; /* Reduced from 18px */
   cursor: pointer;
   transition: background-color 0.2s, box-shadow 0.2s;
   background-color: #ffffff;
   color: #495057;
   border: 1px solid #dee2e6;
   box-shadow: 0 2px 3px rgba(0,0,0,0.05);
+  height: 40px; /* Adjusted for a better ratio */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .button:hover {
@@ -893,6 +898,7 @@ input[readonly].display-input {
   overflow: hidden; 
   display: flex; 
   flex-direction: column;
+  padding-top: 2px; /* Add some top padding */
 }
 
 .sessions-list {
@@ -1106,6 +1112,7 @@ input[readonly].display-input {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  margin-bottom: 10px; /* Add space between sessions and keypad */
 }
 
 .keypad-form {
@@ -1114,6 +1121,7 @@ input[readonly].display-input {
   overflow: hidden; 
   display: flex; 
   flex-direction: column;
+  padding-top: 5px; /* Add some top padding */
 }
 
 /* Function Mode Toggle Button */
