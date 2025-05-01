@@ -627,7 +627,7 @@ function App() {
     
     // Calculate movement
     const deltaX = e.clientX - dragStartXRef.current;
-    const charPositionChange = Math.floor(deltaX / dragSensitivity);
+    const charPositionChange = Math.round(deltaX / dragSensitivity);
     
     if (charPositionChange !== 0) {
       // Update position if change is significant enough
