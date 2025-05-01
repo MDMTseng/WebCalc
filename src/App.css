@@ -44,6 +44,44 @@
   background-color: transparent;
   width: 1%; /* Hack to ensure flex-grow works correctly */
   min-width: 50%; /* Ensure it takes at least half */
+  /* Ensure cursor visibility on all devices */
+  caret-color: #007bff; /* Brighter, more visible cursor color */
+  caret-shape: bar; /* Modern browsers support this */
+  cursor: text; 
+  -webkit-user-select: text; /* iOS needs this */
+  user-select: text;
+}
+
+/* Ensure mobile inputs never show keyboard but display cursor */
+@media (max-width: 768px) {
+  input.display-input {
+    /* Prevent keyboard */
+    -webkit-user-modify: read-only !important;
+    -webkit-appearance: none !important;
+    
+    /* But show cursor and allow selection */
+    caret-color: #007bff !important;
+    cursor: text !important;
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    touch-action: manipulation !important;
+  }
+  
+  input.display-input:focus {
+    outline: none !important;
+    caret-color: #007bff !important;
+    -webkit-text-fill-color: #343a40 !important;
+  }
+}
+
+/* Style for readOnly inputs */
+input[readonly].display-input {
+  opacity: 1;
+  background-color: transparent;
+  color: #343a40;
+  -webkit-appearance: none;
+  caret-color: #007bff !important;
+  cursor: text !important;
 }
 
 .display-answer {

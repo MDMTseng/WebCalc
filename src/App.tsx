@@ -44,6 +44,34 @@ function App() {
   const SWIPE_THRESHOLD = -60; // Min pixels to swipe left
   const SWIPE_DURATION_THRESHOLD = 500; // Max ms for a swipe
 
+  // Use VirtualKeyboard API if available
+  useEffect(() => {
+    // Check if VirtualKeyboard API is supported
+    if ("virtualKeyboard" in navigator) {
+      // Virtual keyboard is supported - use the API
+      console.log("VirtualKeyboard API is supported");
+      
+      // Hide keyboard when input is focused
+      const handleFocus = () => {
+        (navigator as any).virtualKeyboard?.hide();
+      };
+      
+      if (activeInputRef.current) {
+        // Set virtualKeyboardPolicy attribute directly
+        activeInputRef.current.setAttribute('virtualKeyboardPolicy', 'manual');
+        activeInputRef.current.addEventListener('focus', handleFocus);
+      }
+      
+      return () => {
+        if (activeInputRef.current) {
+          activeInputRef.current.removeEventListener('focus', handleFocus);
+        }
+      };
+    } else {
+      console.log("VirtualKeyboard API is not supported");
+    }
+  }, [activeInputRef.current]);
+
   // --- Helper to update sessions immutably ---
   const updateSession = (id: string, updates: Partial<Session>) => {
     setSessions(prev => 
@@ -435,6 +463,7 @@ function App() {
                     <input
                       ref={activeInputRef}
                       type="text"
+                      inputMode='none'
                       className="display-input"
                       value={session.expression}
                       onChange={handleInputChange}
@@ -442,10 +471,12 @@ function App() {
                       onClick={(e) => e.stopPropagation()}
                       placeholder="Enter expression"
                       onPointerDown={(e) => e.stopPropagation()}
+                      // VirtualKeyboard policy is set via useEffect
                     />
                   ) : (
                     <input
                       type="text"
+                      inputMode='none'
                       className="display-input inactive-expression"
                       value={session.expression}
                       readOnly
